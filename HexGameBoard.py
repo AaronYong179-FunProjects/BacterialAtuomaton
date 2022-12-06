@@ -3,6 +3,7 @@
 import numpy as np
 import math
 import cv2
+import random
 
 class HexGameBoard():
     """ An pseudo-infinite hexagonal grid. 
@@ -16,15 +17,14 @@ class HexGameBoard():
     
     """
     def __init__(self, view_shape=None, hex_size=None):
-
-        # pixel size of each hexagonal tile at render
+        # pixel size of each hexagonal tile at render. This is defined as the radius of the outer circle of the hexagon
         self.HEX_SIZE = hex_size
 
         # As a pseudo-infinite grid is used, @param view_shape only specifies how to view this grid.
         # The view dimensions will only be used in rendering the board to the screen.
         x, y = map(lambda x: x - 1, view_shape)
-        self.VIEW_X = x
-        self.VIEW_Y = y
+        self.VIEW_HORIZONTAL = x
+        self.VIEW_VERTICAL = y
 
         # stores "ON" hexagons
         self.board = {} 
@@ -41,16 +41,19 @@ class HexGameBoard():
             del self.board[(q, r)]
 
     def render_board(self):
-        horizontal_spacing = self.HEX_SIZE * 2 # width of hexagon
+        horizontal_spacing = int(math.sqrt(3) * self.HEX_SIZE)
         vertical_spacing = int(3/2 * self.HEX_SIZE)
 
-        render_size = (vertical_spacing * self.VIEW_Y, horizontal_spacing * self.VIEW_X)
-        render_bg = np.zeros(render_size, dtype="uint8")
+        render_size = (vertical_spacing * self.VIEW_VERTICAL, horizontal_spacing * self.VIEW_HORIZONTAL)
+        render_bg = np.zeros(render_size, dtype="uint8") # greyscale only
 
         for hexagon in self.board.keys():
             center = self.hex_to_pixel(hexagon)
             corners = self.get_hex_corners(center)
-            cv2.fillPoly(render_bg, [corners], (255, 255, 255))
+
+            colour = 255 if self.board[hexagon] == 1 else 128
+            cv2.fillPoly(render_bg, [corners], colour)
+                
         
         cv2.imshow("_", render_bg)
         cv2.waitKey(0)
@@ -83,4 +86,15 @@ class HexGameBoard():
             neighbours.append((q + vq, r + vr))
 
         return neighbours
+
+    def random_board(view_shape=None, hex_size=None, p_dead=0.8):
+        board = HexGameBoard(view_shape=view_shape, hex_size=hex_size)
+
+        for r in range(board.VIEW_VERTICAL + 1):
+            for q in range(-board.VIEW_VERTICAL // 2, board.VIEW_HORIZONTAL + 1):
+                rand = random.random()
+                if rand >= p_dead:
+                    board.set_hex((q, r)) 
+
+        return board
 
